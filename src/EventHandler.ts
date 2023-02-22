@@ -1,10 +1,18 @@
 import { Event } from "./Event";
 
+export type ExtraOpts = {
+  predicate: (event: Event) => boolean;
+};
 
 export class EventHandler {
   static listeners = new Map<
     new (...args: any[]) => {},
-    { clazz: {}; propertyKey: string; eventType: "static" | "instance" }[]
+    {
+      clazz: {};
+      propertyKey: string;
+      eventType: "static" | "instance";
+      predicate?: (event: Event) => boolean;
+    }[]
   >();
 
   static clazzInstances = new Map<string, {}[]>();
@@ -33,6 +41,8 @@ export class EventHandler {
     let events = this.listeners.get(event);
 
     events?.forEach((x) => {
+      if (x.predicate !== undefined && !x.predicate(event)) return;
+
       if (x.eventType === "static") {
         (
           x.clazz[x.propertyKey as keyof typeof x.clazz] as (
@@ -65,76 +75,93 @@ export class EventHandler {
     };
   }
 
-  static Instance<T extends new (...args: any[]) => Event>(event: T) {
-    return function (
-      target: {},
-      propertyKey: string,
-      descriptor: TypedPropertyDescriptor<{}>
-    ) {
-      let events = EventHandler.listeners.get(event);
-
-      let dt = {
-        clazz: target,
-        propertyKey: propertyKey,
-        eventType: "instance",
-      } as const;
-
-      if (!events) {
-        EventHandler.listeners.set(event, [dt]);
-      } else {
-        events.push(dt);
-      }
-
-      return descriptor;
-    };
-  }
-
-  static Static<T extends new (...args: any[]) => Event>(event: T) {
-    return function (
-      target: {},
-      propertyKey: string,
-      descriptor: TypedPropertyDescriptor<{}>
-    ) {
-      let events = EventHandler.listeners.get(event);
-
-      let dt = {
-        clazz: target,
-        propertyKey: propertyKey,
-        eventType: "static",
-      } as const;
-
-      if (!events) {
-        EventHandler.listeners.set(event, [dt]);
-      } else {
-        events.push(dt);
-      }
-
-      return descriptor;
-    };
-  }
-
-  static Listener<T extends new (...args: any[]) => Event>(
+  //idk if thes ecan just call Listen since its also a decorator
+  static Instance<T extends new (...args: any[]) => Event>(
     event: T,
-    eventType: "static" | "instance"
+    opts?: ExtraOpts
   ) {
     return function (
       target: {},
       propertyKey: string,
       descriptor: TypedPropertyDescriptor<{}>
     ) {
-      let events = EventHandler.listeners.get(event);
+      EventHandler.addListener(
+        event,
+        "instance",
+        opts,
+        target,
+        propertyKey,
+        descriptor
+      );
 
-      let dt = {
-        clazz: target,
-        propertyKey: propertyKey,
-        eventType: eventType,
-      };
+      return descriptor;
+    };
+  }
 
-      if (!events) {
-        EventHandler.listeners.set(event, [dt]);
-      } else {
-        events.push(dt);
-      }
+  static Static<T extends new (...args: any[]) => Event>(
+    event: T,
+    opts?: ExtraOpts
+  ) {
+    return function (
+      target: {},
+      propertyKey: string,
+      descriptor: TypedPropertyDescriptor<{}>
+    ) {
+      EventHandler.addListener(
+        event,
+        "static",
+        opts,
+        target,
+        propertyKey,
+        descriptor
+      );
+
+      return descriptor;
+    };
+  }
+
+  static addListener<T extends new (...args: any[]) => Event>(
+    event: T,
+    eventType: "static" | "instance",
+    opts: ExtraOpts | undefined = undefined,
+    target: {},
+    propertyKey: string,
+    descriptor: TypedPropertyDescriptor<{}>
+  ) {
+    let events = EventHandler.listeners.get(event);
+
+    let dt = {
+      clazz: target,
+      propertyKey: propertyKey,
+      eventType: eventType,
+      predicate: opts?.predicate,
+    };
+
+    if (!events) {
+      EventHandler.listeners.set(event, [dt]);
+    } else {
+      events.push(dt);
+    }
+  }
+
+  static Listener<T extends new (...args: any[]) => Event>(
+    event: T,
+    eventType: "static" | "instance",
+    opts?: ExtraOpts
+  ) {
+    return function (
+      target: {},
+      propertyKey: string,
+      descriptor: TypedPropertyDescriptor<{}>
+    ) {
+      EventHandler.addListener(
+        event,
+        eventType,
+        opts,
+        target,
+        propertyKey,
+        descriptor
+      );
 
       return descriptor;
     };
