@@ -37,15 +37,24 @@ export class EventHandler {
     else clazzes.remove(clazzes.indexOf(instance));
   }
 
-  static callEvent<T extends new (...args: any[]) => Event>(
+  static callGlobal<T extends new (...args: any[]) => RemoteRovent>(
     event: T,
-    arg: Event,
+    arg: RemoteRovent
+  ) {
+    EventHandler.callRemote(event, arg, "*");
+    EventHandler.callEvent(event, arg);
+  }
+
+  static callRemote(
+    event: new (...args: any[]) => Event,
+    arg: RemoteRovent,
+    player: Player | "*" | undefined = undefined,
     wasFiredInternally: boolean = false
   ) {
-    if (!wasFiredInternally && new event().eventType === "remote") {
+    if (!wasFiredInternally) {
       let rEvent = game
         .GetService("ReplicatedStorage")
-        .FindFirstChild(tostring(event), true);
+        .FindFirstChild(tostring(event), true) as RemoteEvent;
 
       if (!rEvent) {
         error(
@@ -57,14 +66,22 @@ export class EventHandler {
         return;
       }
       if (game.GetService("RunService").IsServer()) {
-        (rEvent as RemoteEvent).FireClient((arg as RemoteRovent).player, arg);
+        if (player === undefined) return;
+
+        if (player === "*") rEvent.FireAllClients(arg);
+        else rEvent.FireClient(player, arg);
       } else if (game.GetService("RunService").IsClient()) {
-        (rEvent as RemoteEvent).FireServer(arg);
+        rEvent.FireServer(arg);
       }
 
       return;
     }
+  }
 
+  static callEvent<T extends new (...args: any[]) => Event>(
+    event: T,
+    arg: Event
+  ) {
     let events = this.listeners.get(event);
 
     events?.forEach((x) => {
@@ -177,12 +194,12 @@ export class EventHandler {
 
       //No way to check if it actually is a remote event?? useful woo
       if (!remoteEvent) {
-        error(
-          `Attempt to use ${tostring(
-            event
-          )} as a remote event, but could not find RemoteEvent in ReplicatedStorage.`
+        print(`Could not find ${tostring(event)}, creating remote event.`);
+        remoteEvent = new Instance(
+          "RemoteEvent",
+          game.GetService("ReplicatedStorage")
         );
-        return;
+        remoteEvent.Name = tostring(event);
       }
 
       if (game.GetService("RunService").IsServer()) {
@@ -190,7 +207,7 @@ export class EventHandler {
 
         let scon = (remoteEvent as RemoteEvent).OnServerEvent.Connect(
           (player, ...args) => {
-            EventHandler.callEvent(event, args[0] as Event, true);
+            EventHandler.callEvent(event, args[0] as Event);
           }
         );
 
@@ -200,7 +217,7 @@ export class EventHandler {
 
         let ccon = (remoteEvent as RemoteEvent).OnClientEvent.Connect(
           (...args: unknown[]) => {
-            EventHandler.callEvent(event, args[0] as Event, true);
+            EventHandler.callEvent(event, args[0] as Event);
           }
         );
 
