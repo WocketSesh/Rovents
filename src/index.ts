@@ -1,17 +1,5 @@
 import { Event } from "./Event";
 import { EventHandler } from "./EventHandler";
+import { RemoteRovent } from "./RemoteEvent";
 
-export { Event, EventHandler };
-
-class test extends Event {
-  public name: string = "yo";
-}
-
-class test2 {
-  @EventHandler.Static(test, {
-    predicate: (event) => {
-      return true;
-    },
-  })
-  test() {}
-}
+export { Event, EventHandler, RemoteRovent };

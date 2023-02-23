@@ -1,4 +1,5 @@
 import { Event } from "./Event";
+import { RemoteRovent } from "./RemoteEvent";
 
 export type ExtraOpts = {
   predicate: (event: Event) => boolean;
@@ -16,6 +17,8 @@ export class EventHandler {
   >();
 
   static clazzInstances = new Map<string, {}[]>();
+  static clientConnections = new Map<string, RBXScriptConnection>();
+  static serverConnections = new Map<string, RBXScriptConnection>();
 
   static newInstance(name: string, instance: {}) {
     let clazzes = this.clazzInstances.get(name);
@@ -36,12 +39,36 @@ export class EventHandler {
 
   static callEvent<T extends new (...args: any[]) => Event>(
     event: T,
-    arg: Event
+    arg: Event,
+    wasFiredInternally: boolean = false
   ) {
+    if (!wasFiredInternally && new event().eventType === "remote") {
+      let rEvent = game
+        .GetService("ReplicatedStorage")
+        .FindFirstChild(tostring(event), true);
+
+      if (!rEvent) {
+        error(
+          `Attempt to call remote event but could not find ${tostring(
+            event
+          )} in Replicated Storage`
+        );
+
+        return;
+      }
+      if (game.GetService("RunService").IsServer()) {
+        (rEvent as RemoteEvent).FireClient((arg as RemoteRovent).player, arg);
+      } else if (game.GetService("RunService").IsClient()) {
+        (rEvent as RemoteEvent).FireServer(arg);
+      }
+
+      return;
+    }
+
     let events = this.listeners.get(event);
 
     events?.forEach((x) => {
-      if (x.predicate !== undefined && !x.predicate(event)) return;
+      if (x.predicate !== undefined && !x.predicate(arg)) return;
 
       if (x.eventType === "static") {
         (
@@ -63,7 +90,7 @@ export class EventHandler {
               self: typeof clazz,
               arg: Event
             ) => void
-          )(clazz, event);
+          )(clazz, arg);
         });
       }
     });
@@ -141,6 +168,44 @@ export class EventHandler {
       EventHandler.listeners.set(event, [dt]);
     } else {
       events.push(dt);
+    }
+
+    if (new event().eventType === "remote") {
+      let remoteEvent = game
+        .GetService("ReplicatedStorage")
+        .FindFirstChild(tostring(event), true);
+
+      //No way to check if it actually is a remote event?? useful woo
+      if (!remoteEvent) {
+        error(
+          `Attempt to use ${tostring(
+            event
+          )} as a remote event, but could not find RemoteEvent in ReplicatedStorage.`
+        );
+        return;
+      }
+
+      if (game.GetService("RunService").IsServer()) {
+        if (EventHandler.serverConnections.get(tostring(event))) return;
+
+        let scon = (remoteEvent as RemoteEvent).OnServerEvent.Connect(
+          (player, ...args) => {
+            EventHandler.callEvent(event, args[0] as Event, true);
+          }
+        );
+
+        EventHandler.clientConnections.set(tostring(event), scon);
+      } else if (game.GetService("RunService").IsClient()) {
+        if (EventHandler.clientConnections.get(tostring(event))) return;
+
+        let ccon = (remoteEvent as RemoteEvent).OnClientEvent.Connect(
+          (player, ...args: unknown[]) => {
+            EventHandler.callEvent(event, args[0] as Event, true);
+          }
+        );
+
+        EventHandler.clientConnections.set(tostring(event), ccon);
+      }
     }
   }
 
