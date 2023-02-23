@@ -192,8 +192,7 @@ export class EventHandler {
         .GetService("ReplicatedStorage")
         .FindFirstChild(tostring(event), true);
 
-      //No way to check if it actually is a remote event?? useful woo
-      if (!remoteEvent) {
+      if (!remoteEvent || !remoteEvent.IsA("RemoteEvent")) {
         print(`Could not find ${tostring(event)}, creating remote event.`);
         remoteEvent = new Instance(
           "RemoteEvent",
@@ -207,7 +206,8 @@ export class EventHandler {
 
         let scon = (remoteEvent as RemoteEvent).OnServerEvent.Connect(
           (player, ...args) => {
-            EventHandler.callEvent(event, args[0] as Event);
+            (args[0] as RemoteRovent).player = player;
+            EventHandler.callEvent(event, args[0] as RemoteRovent);
           }
         );
 
