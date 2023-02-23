@@ -199,7 +199,7 @@ export class EventHandler {
         if (EventHandler.clientConnections.get(tostring(event))) return;
 
         let ccon = (remoteEvent as RemoteEvent).OnClientEvent.Connect(
-          (player, ...args: unknown[]) => {
+          (...args: unknown[]) => {
             EventHandler.callEvent(event, args[0] as Event, true);
           }
         );
