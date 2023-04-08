@@ -1,6 +1,6 @@
 {
   "name": "@shagos/rovents",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "description": "",
   "main": "out/init.lua",
   "scripts": {
