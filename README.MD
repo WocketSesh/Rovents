@@ -29,18 +29,28 @@ class PlayerListeners {
 
 #### Receiving Event (Instanced)
 
-Classes that contain an instanced event require `@EventHandler.Instanced()` decorator.
-Instanced events will run on each instance of that class that has been instantiated
+Classes that you want to be instanced based will require you to add a method call to the constructor
+And an optional one to a destructor if you use one.
 
 ```ts
 @EventHandler.Instanced()
 class PlayerListeners {
   someRandomValue: 321;
 
+  constructor() {
+    EventHandler.newInstance(this);
+  }
+
   @EventHandler.Instance(PlayerDied)
   onPlayerDied(event: PlayerDied) {
     print(`${event.Player.Name} Died`);
     this.someRandomValue += 1;
+  }
+
+  // Optional destructor method call
+  // You should call this if your classes are being destroyed 
+  destroy() {
+    EventHandler.instanceDestroyed();
   }
 }
 ```
