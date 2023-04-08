@@ -45,7 +45,7 @@ export class EventHandler {
   static callRemote(
     event: new (...args: any[]) => Event,
     arg: RemoteRovent,
-    player: Player | "*" | undefined = undefined,
+    player: Player | "*" | Player[] | undefined = undefined,
     wasFiredInternally: boolean = false
   ) {
     if (!wasFiredInternally) {
@@ -66,7 +66,13 @@ export class EventHandler {
         if (player === undefined) return;
 
         if (player === "*") rEvent.FireAllClients(arg);
-        else rEvent.FireClient(player, arg);
+        else if (typeIs(player, "table")) {
+          let t = player as Player[]
+          for (let i = 0; i < t.size(); i++) {
+            rEvent.FireClient(t[i], arg);
+          }
+        } else
+          rEvent.FireClient(player, arg)
       } else if (game.GetService("RunService").IsClient()) {
         rEvent.FireServer(arg);
       }
