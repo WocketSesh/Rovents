@@ -7,7 +7,7 @@ export type ExtraOpts = {
 
 export class EventHandler {
   static listeners = new Map<
-    new (...args: any[]) => {},
+    string,
     {
       clazz: {};
       propertyKey: string;
@@ -35,7 +35,7 @@ export class EventHandler {
   }
 
   static callGlobal<T extends new (...args: any[]) => RemoteRovent>(
-    event: T,
+    event: T | string,
     arg: RemoteRovent
   ) {
     EventHandler.callRemote(event, arg, "*");
@@ -43,24 +43,22 @@ export class EventHandler {
   }
 
   static callRemote(
-    event: new (...args: any[]) => Event,
+    event: (new (...args: any[]) => Event) | string,
     arg: RemoteRovent,
     player: Player | "*" | Player[] | undefined = undefined,
     wasFiredInternally: boolean = false
   ) {
+    if (!typeIs(event, "string")) event = tostring(getmetatable(event))
+
     if (!wasFiredInternally) {
       let rEvent = game
         .GetService("ReplicatedStorage")
-        .FindFirstChild(tostring(event), true) as RemoteEvent;
+        .FindFirstChild(event, true) as RemoteEvent;
 
       if (!rEvent) {
         error(
-          `Attempt to call remote event but could not find ${tostring(
-            event
-          )} in Replicated Storage`
+          `Attempt to call remote event but could not find ${event} in Replicated Storage`
         );
-
-        return;
       }
       if (game.GetService("RunService").IsServer()) {
         if (player === undefined) return;
@@ -82,9 +80,11 @@ export class EventHandler {
   }
 
   static callEvent<T extends new (...args: any[]) => Event>(
-    event: T,
+    event: T | string,
     arg: Event
   ) {
+    if (!typeIs(event, "string")) event = tostring(event);
+
     let events = this.listeners.get(event);
 
     events?.forEach((x) => {
@@ -176,7 +176,8 @@ export class EventHandler {
     propertyKey: string,
     descriptor: TypedPropertyDescriptor<{}>
   ) {
-    let events = EventHandler.listeners.get(event);
+
+    let events = EventHandler.listeners.get(tostring(event));
 
     let dt = {
       clazz: target,
@@ -186,7 +187,7 @@ export class EventHandler {
     };
 
     if (!events) {
-      EventHandler.listeners.set(event, [dt]);
+      EventHandler.listeners.set(tostring(event), [dt]);
     } else {
       events.push(dt);
     }
@@ -211,7 +212,8 @@ export class EventHandler {
         let scon = (remoteEvent as RemoteEvent).OnServerEvent.Connect(
           (player, ...args) => {
             (args[0] as RemoteRovent).player = player;
-            EventHandler.callEvent(event, args[0] as RemoteRovent);
+            // just use string version of event internally makes life easier
+            EventHandler.callEvent(tostring(event), args[0] as RemoteRovent);
           }
         );
 
@@ -221,7 +223,7 @@ export class EventHandler {
 
         let ccon = (remoteEvent as RemoteEvent).OnClientEvent.Connect(
           (...args: unknown[]) => {
-            EventHandler.callEvent(event, args[0] as Event);
+            EventHandler.callEvent(tostring(event), args[0] as Event);
           }
         );
 

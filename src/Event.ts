@@ -1,5 +1,12 @@
+import { EventHandler } from "./EventHandler";
+
 export class Event {
   eventType: "event" | "remote" = "event";
 
-  constructor() {}
+  constructor() { }
+
+
+  fire() {
+    EventHandler.callEvent(tostring(getmetatable(this)), this);
+  }
 }
