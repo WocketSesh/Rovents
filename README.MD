@@ -1,5 +1,7 @@
 # Rovents
 
+`npm i @shagos/rovents`
+
 shared/events/PlayerDied
 
 ```ts
