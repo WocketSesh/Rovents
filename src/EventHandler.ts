@@ -20,18 +20,15 @@ export class EventHandler {
   static clientConnections = new Map<string, RBXScriptConnection>();
   static serverConnections = new Map<string, RBXScriptConnection>();
 
-  static newInstance(name: string, instance: {}) {
-    let clazzes = this.clazzInstances.get(name);
+  static newInstance(instance: {}) {
+    let clazzes = this.clazzInstances.get(tostring(getmetatable(instance)));
 
-    if (!clazzes)
-      return error(
-        `Attempt to store new instance of ${name}, but this class is not Instanced.`
-      );
+    if (!clazzes) this.clazzInstances.set(tostring(getmetatable(instance)), [instance]);
     else clazzes.push(instance);
   }
 
-  static instanceDestroyed(name: string, instance: {}) {
-    let clazzes = this.clazzInstances.get(name);
+  static instanceDestroyed(instance: {}) {
+    let clazzes = this.clazzInstances.get(tostring(getmetatable(instance)));
 
     if (!clazzes) return;
     else clazzes.remove(clazzes.indexOf(instance));
@@ -114,8 +111,9 @@ export class EventHandler {
   }
 
   static Instanced() {
-    return function (target: {}) {
-      EventHandler.clazzInstances.set(tostring(target), []);
+    return function(target: {}) {
+      if (!EventHandler.clazzInstances.get(tostring(target)))
+        EventHandler.clazzInstances.set(tostring(target), []);
     };
   }
 
@@ -124,7 +122,7 @@ export class EventHandler {
     event: T,
     opts?: ExtraOpts
   ) {
-    return function (
+    return function(
       target: {},
       propertyKey: string,
       descriptor: TypedPropertyDescriptor<{}>
@@ -146,7 +144,7 @@ export class EventHandler {
     event: T,
     opts?: ExtraOpts
   ) {
-    return function (
+    return function(
       target: {},
       propertyKey: string,
       descriptor: TypedPropertyDescriptor<{}>
@@ -231,7 +229,7 @@ export class EventHandler {
     eventType: "static" | "instance",
     opts?: ExtraOpts
   ) {
-    return function (
+    return function(
       target: {},
       propertyKey: string,
       descriptor: TypedPropertyDescriptor<{}>

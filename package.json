@@ -1,9 +1,10 @@
 {
   "name": "@shagos/rovents",
-  "version": "1.0.11",
+  "version": "1.0.15",
   "description": "",
   "main": "out/init.lua",
   "scripts": {
+    "postinstall": "patch-package",
     "build": "rbxtsc",
     "watch": "rbxtsc -w",
     "prepublishOnly": "npm run build"
@@ -23,5 +24,8 @@
     "@rbxts/compiler-types": "^2.1.0-types.1",
     "@rbxts/types": "^1.0.663",
     "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "patch-package": "^6.5.1"
   }
 }
