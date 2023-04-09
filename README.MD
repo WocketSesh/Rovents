@@ -25,6 +25,8 @@ new PlayerDied(SomePlayer).fire()
 
 #### Calling RemoteRovent 
 
+Creating a RemoteRovent is the same as a normal event, instead you extend RemoteRovent
+
 ```ts
 // Leave Player param empty if calling client -> server
 EventHandler.callRemote(PlayerDied, new PlayerDied(SomePlayer), player | [player1, player2] | "*")
@@ -72,7 +74,7 @@ class PlayerListeners {
   // Optional destructor method call
   // You should call this if your classes are being destroyed 
   destroy() {
-    EventHandler.instanceDestroyed();
+    EventHandler.instanceDestroyed(this);
   }
 }
 ```
