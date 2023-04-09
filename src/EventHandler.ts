@@ -116,12 +116,6 @@ export class EventHandler {
     });
   }
 
-  static Instanced() {
-    return function(target: {}) {
-      if (!EventHandler.clazzInstances.get(tostring(target)))
-        EventHandler.clazzInstances.set(tostring(target), []);
-    };
-  }
 
   //idk if thes ecan just call Listen since its also a decorator
   static Instance<T extends new (...args: any[]) => Event>(

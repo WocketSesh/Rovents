@@ -1,6 +1,6 @@
 import { Event } from "./Event";
 import { EventHandler } from "./EventHandler";
 import { RemoteRovent } from "./RemoteEvent";
-
-export { Event, EventHandler, RemoteRovent };
+import { Replica } from "./Replica"
+export { Event, EventHandler, RemoteRovent, Replica };
 
