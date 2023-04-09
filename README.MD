@@ -1,5 +1,5 @@
 # Rovents
-# Meant to be used with: https://github.com/roblox-ts/roblox-ts
+Meant to be used with: https://github.com/roblox-ts/roblox-ts
 
 `npm i @shagos/rovents`
 
@@ -80,7 +80,7 @@ class PlayerListeners {
 
 ### Replicas
 
-# Replicas can be used to bind a client side value to a server side value and have it be automatically updated
+Replicas can be used to bind a client side value to a server side value and have it be automatically updated
 
 ```ts
 // Shared
@@ -105,6 +105,6 @@ class SomeController {
 }
 ```
 
-# You can have multiple Replica classes active, but they will most likely conflict with each other and is not recommended
-# If you Listen to money on multiple classes / instances, they will all hold the same value
-# You will not be able to use this to track multiple values of money on the client side, since each client is tied to 1 value of money
+You can have multiple Replica classes active, but they will most likely conflict with each other and is not recommended
+If you Listen to money on multiple classes / instances, they will all hold the same value
+You will not be able to use this to track multiple values of money on the client side, since each client is tied to 1 value of money
