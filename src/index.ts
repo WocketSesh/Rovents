@@ -7,21 +7,11 @@ export { Event, EventHandler, RemoteRovent, Replica };
 //Shared
 
 let Replicas = new Replica({
-  pets: [],
+  pets: [] as number[],
+  otherarr: [] as string[],
   coins: 0,
   zones: 0,
 });
 
-//Client
-
-class SomeController {
-  @Replicas.Listen("coins")
-  coins = 0;
-
-  @Replicas.ListenMethod("pets")
-  petsChanged(pets: []) {
-    for (let i = 0; i < pets.size(); i++) {
-      //update ui or some shit
-    }
-  }
-}
+Replicas.pushArray("pets", 123);
+Replicas.pushArray("otherarr", "yooo");

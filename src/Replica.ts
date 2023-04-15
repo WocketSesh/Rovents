@@ -12,6 +12,25 @@ export class Replica<T extends {}> {
     EventHandler.newInstance(this);
   }
 
+  pushArray<V extends defined>(
+    player: Player,
+    arr: ExtractKeys<T, ArrayLike<V>>,
+    value: V
+  ) {
+    let d = this.data.get(player);
+
+    if (!d) {
+      d = this.cloneTable(this.values) as T;
+
+      (d[arr] as V[]).push(value);
+      this.data.set(player, d);
+    } else {
+      (d[arr] as V[]).push(value);
+    }
+
+    new UpdateEvent({ [arr]: d }, player).fire(player);
+  }
+
   initPlayer(player: Player, values?: T) {
     this.set(player, values || this.cloneTable(this.values));
   }
@@ -78,7 +97,13 @@ export class Replica<T extends {}> {
     }
 
     // event.player should always just be LocalPlayer, but just incase
-    this.data.set(event.player, event.data as T);
+    let x = this.data.get(event.player);
+
+    if (!x) return;
+
+    for (let [i, v] of pairs(event.data)) {
+      x[i as keyof T] = v as T[keyof T];
+    }
 
     if (event.player !== game.GetService("Players").LocalPlayer) return;
 
