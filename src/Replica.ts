@@ -1,10 +1,12 @@
-import { EventHandler } from "./EventHandler"
+import { EventHandler } from "./EventHandler";
 import { UpdateEvent } from "./UpdateEvent";
-
 
 export class Replica<T extends {}> {
   data: Map<Player, T> = new Map();
-  replicaListeners: Map<keyof T, { clazz: string, property: string }[]> = new Map();
+  replicaListeners: Map<keyof T, { clazz: string; property: string }[]> =
+    new Map();
+  replicaMethodListeners: Map<keyof T, { clazz: string; method: string }[]> =
+    new Map();
 
   constructor(public values: T) {
     EventHandler.newInstance(this);
@@ -19,9 +21,8 @@ export class Replica<T extends {}> {
   }
 
   set(player: Player, x: Partial<T>) {
-
     if (game.GetService("RunService").IsClient()) {
-      warn("Cannot do Replica.set on client side.")
+      warn("Cannot do Replica.set on client side.");
       return;
     }
 
@@ -29,7 +30,7 @@ export class Replica<T extends {}> {
 
     if (!d) {
       d = this.cloneTable(this.values);
-      this.i_set(d, x)
+      this.i_set(d, x);
       this.data.set(player, d);
     } else {
       this.i_set(d, x);
@@ -40,7 +41,7 @@ export class Replica<T extends {}> {
 
   private i_set(oldD: Partial<T>, newD: Partial<T>) {
     for (let [i, v] of pairs(newD)) {
-      oldD[i as keyof T] = newD[i as keyof T]
+      oldD[i as keyof T] = newD[i as keyof T];
     }
   }
 
@@ -59,9 +60,12 @@ export class Replica<T extends {}> {
 
   get(player?: Player): T | undefined {
     if (player === undefined && game.GetService("RunService").IsServer()) {
-      warn("When doing Replica.get on server side you must provide a valid player argument.");
+      warn(
+        "When doing Replica.get on server side you must provide a valid player argument."
+      );
       return undefined;
-    } else if (player === undefined) player = game.GetService("Players").LocalPlayer;
+    } else if (player === undefined)
+      player = game.GetService("Players").LocalPlayer;
 
     return this.data.get(player);
   }
@@ -69,52 +73,88 @@ export class Replica<T extends {}> {
   @EventHandler.Instance(UpdateEvent)
   update(event: UpdateEvent<T>) {
     if (game.GetService("RunService").IsServer()) {
-      warn("Attempt to call Replica.update on server side.")
+      warn("Attempt to call Replica.update on server side.");
       return;
-    };
+    }
 
     // event.player should always just be LocalPlayer, but just incase
     this.data.set(event.player, event.data as T);
 
     if (event.player !== game.GetService("Players").LocalPlayer) return;
 
-
     for (let [i, v] of pairs(event.data as Partial<T>)) {
       let x = this.replicaListeners.get(i as keyof T);
-      if (!x) continue;
+      if (x) {
+        for (let ii = 0; ii < x.size(); ii++) {
+          let c = x[ii];
+          let instances = EventHandler.clazzInstances.get(c.clazz);
+          if (!instances) continue;
 
-      for (let ii = 0; ii < x.size(); ii++) {
-        let c = x[ii];
+          this.updateProperties(instances, c.property, v);
+        }
+      }
+
+      let y = this.replicaMethodListeners.get(i as keyof T);
+
+      if (!y) continue;
+
+      for (let ii = 0; ii < y.size(); ii++) {
+        let c = y[ii];
         let instances = EventHandler.clazzInstances.get(c.clazz);
         if (!instances) continue;
 
-        this.notifyInstances(instances, c.property, v)
+        this.callMethods(instances, c.method, v);
       }
-
     }
   }
 
-  notifyInstances<T extends {}>(instances: T[], property: string, value: unknown) {
+  updateProperties<T extends {}>(
+    instances: T[],
+    property: string,
+    value: unknown
+  ) {
     for (let i = 0; i < instances.size(); i++) {
       instances[i][property as keyof T] = value as T[keyof T];
     }
   }
 
+  callMethods<T extends {}>(instances: T[], method: string, value: unknown) {
+    for (let i = 0; i < instances.size(); i++) {
+      (
+        instances[i][method as keyof T] as (self: unknown, arg: unknown) => void
+      )(instances[i], value);
+    }
+  }
+
   Listen(value: keyof T) {
     let replica = this;
-    return function(target: {}, key: string) {
+    return function (target: {}, key: string) {
       if (game.GetService("RunService").IsServer()) {
-        warn("You cannot listen to replica values on server side.")
+        warn("You cannot listen to replica values on server side.");
         return;
       }
 
       let x = tostring(target);
       let y = replica.replicaListeners.get(value);
-      if (!y) replica.replicaListeners.set(value, [{ property: key, clazz: x }]);
-      else y.push({ property: key, clazz: x });
-    }
+
+      (y && y.push({ property: key, clazz: x })) ||
+        replica.replicaListeners.set(value, [{ property: key, clazz: x }]);
+    };
+  }
+
+  ListenMethod(value: keyof T) {
+    let replica = this;
+    return function (target: {}, key: string, descriptor: {}) {
+      if (game.GetService("RunService").IsServer()) {
+        warn("You cannot use ListenMethod on server side.");
+        return;
+      }
+
+      let x = tostring(target);
+      let y = replica.replicaMethodListeners.get(value);
+
+      (y && y.push({ method: key, clazz: x })) ||
+        replica.replicaMethodListeners.set(value, [{ method: key, clazz: x }]);
+    };
   }
 }
-
-
-
