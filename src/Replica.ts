@@ -98,11 +98,15 @@ export class Replica<T extends {}> {
 
     // event.player should always just be LocalPlayer, but just incase
     let x = this.data.get(event.player);
-
-    if (!x) return;
-
-    for (let [i, v] of pairs(event.data)) {
-      x[i as keyof T] = v as T[keyof T];
+    let old: T | undefined = undefined;
+    // This should only run on the initial set when using initPlayer, so all values should be present
+    if (!x) {
+      this.data.set(event.player, event.data as T);
+    } else {
+      old = this.cloneTable(x);
+      for (let [i, v] of pairs(event.data)) {
+        x[i as keyof T] = v as T[keyof T];
+      }
     }
 
     if (event.player !== game.GetService("Players").LocalPlayer) return;
@@ -128,7 +132,7 @@ export class Replica<T extends {}> {
         let instances = EventHandler.clazzInstances.get(c.clazz);
         if (!instances) continue;
 
-        this.callMethods(instances, c.method, v);
+        this.callMethods(instances, c.method, v, old, i as keyof T);
       }
     }
   }
@@ -143,17 +147,27 @@ export class Replica<T extends {}> {
     }
   }
 
-  callMethods<T extends {}>(instances: T[], method: string, value: unknown) {
+  callMethods<Y extends {}>(
+    instances: Y[],
+    method: string,
+    newD: unknown,
+    oldD: T | undefined,
+    index: keyof T
+  ) {
     for (let i = 0; i < instances.size(); i++) {
       (
-        instances[i][method as keyof T] as (self: unknown, arg: unknown) => void
-      )(instances[i], value);
+        instances[i][method as keyof Y] as (
+          self: unknown,
+          oldD: unknown,
+          newD: unknown
+        ) => void
+      )(instances[i], oldD ? oldD[index] : undefined, newD);
     }
   }
 
   Listen(value: keyof T) {
     let replica = this;
-    return function (target: {}, key: string) {
+    return function(target: {}, key: string) {
       if (game.GetService("RunService").IsServer()) {
         warn("You cannot listen to replica values on server side.");
         return;
@@ -169,7 +183,7 @@ export class Replica<T extends {}> {
 
   ListenMethod(value: keyof T) {
     let replica = this;
-    return function (target: {}, key: string, descriptor: {}) {
+    return function(target: {}, key: string, descriptor: {}) {
       if (game.GetService("RunService").IsServer()) {
         warn("You cannot use ListenMethod on server side.");
         return;
